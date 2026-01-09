@@ -5,3 +5,4 @@ plotly
 sqlalchemy
 psycopg2-binary
 sqlalchemy-redshift
+redshift_connector
