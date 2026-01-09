@@ -1,5 +1,7 @@
+setuptools
 streamlit
 pandas
 plotly
-sqlalchemy-redshift
+sqlalchemy
 psycopg2-binary
+sqlalchemy-redshift
