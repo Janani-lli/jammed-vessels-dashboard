@@ -47,14 +47,11 @@ def start_RS_engine_for_pd(
     engine = create_engine(url)
 
     return engine
-
-host_st = "lli-dev-rpc-redshift.cm1ma67sygrk.eu-west-1.redshift.amazonaws.com"
-db_st = "rpc"
-password_st = "DV55pnwm8aMzYHybgBLe"
+    
 engine = start_RS_engine_for_pd(
-    host=st.secrets(host_st),
-    username=st.secrets(db_st),
-    password=st.secrets(password_st)
+    host=st.secrets["host_st"],
+    username=st.secrets["db_st"],
+    password=st.secrets["password_st"]
 )
 
 
