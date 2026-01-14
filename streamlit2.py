@@ -88,7 +88,9 @@ def fetch_redshift_snapshot():
     SELECT *
     FROM lli_prc_dev_gsdbincr_staging.tsw_jammed_events_hist
     """
-    return pd.read_sql(query, engine)
+    with engine.connect() as conn:
+        return pd.read_sql(query, conn)
+
 
 
 # Helper: Save Run Snapshot
