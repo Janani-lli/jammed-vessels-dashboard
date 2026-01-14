@@ -1,0 +1,6 @@
+streamlit
+pandas
+plotly
+sqlalchemy==1.4.50
+redshift-connector
+psycopg2-binary

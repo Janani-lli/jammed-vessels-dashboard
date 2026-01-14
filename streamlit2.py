@@ -1,7 +1,4 @@
-# --------------------------------------------
-# GPS Jamming Monitoring Dashboard
-# Snapshot-based Multi-Run History (Redshift)
-# --------------------------------------------
+
 
 import streamlit as st
 import pandas as pd
@@ -15,19 +12,18 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# --------------------------------------------
+
 # Page Config
-# --------------------------------------------
+
 st.set_page_config(
-    page_title="GPS Jamming Monitoring Dashboard",
+    page_title="GPS Jamming Monitor",
     layout="wide"
 )
 
 st.title(" GPS Jamming Monitoring Dashboard")
 
-# --------------------------------------------
 # Redshift Connection Config
-# --------------------------------------------
+
 def start_RS_engine_for_pd(
     db_to_query="sas", 
     host="lli-dev-rpc-redshift.cm1ma67sygrk.eu-west-1.redshift.amazonaws.com", 
@@ -53,17 +49,21 @@ def start_RS_engine_for_pd(
     return engine
 
 # engine = start_RS_engine_for_pd()
-engine = start_RS_engine_for_pd(host="lli-dev-rpc-redshift.cm1ma67sygrk.eu-west-1.redshift.amazonaws.com", username='rpc', password='DV55pnwm8aMzYHybgBLe')
+engine = start_RS_engine_for_pd(
+    host=st.secrets["lli-dev-rpc-redshift.cm1ma67sygrk.eu-west-1.redshift.amazonaws.com"],
+    username=st.secrets["rpc"],
+    password=st.secrets["DV55pnwm8aMzYHybgBLe"]
+)
 
-# --------------------------------------------
+
 # Persistent Run Storage
-# --------------------------------------------
+
 RUN_FOLDER = "runs"
 os.makedirs(RUN_FOLDER, exist_ok=True)
 
-# ===============================
+
 # SESSION STATE INIT
-# ===============================
+
 if "df_current" not in st.session_state:
     st.session_state.df_current = None
 
@@ -73,20 +73,20 @@ if "run_loaded" not in st.session_state:
 if "current_run_name" not in st.session_state:
     st.session_state.current_run_name = None
 
-# --------------------------------------------
+
 # Sidebar Controls & Alerts
-# --------------------------------------------
+
 st.sidebar.header("Controls")
-fetch_data = st.sidebar.button("🔄 Fetch Latest Redshift Data")
+fetch_data = st.sidebar.button("Fetch Latest Redshift Data")
 compare_prev = st.sidebar.toggle("Compare with previous run", value=True)
 last_n_runs = st.sidebar.slider("Number of runs to display in trend", min_value=2, max_value=10, value=5)
 
 if st.session_state.current_run_name:
     st.sidebar.caption(f"Active run: {st.session_state.current_run_name}")
 
-# --------------------------------------------
+
 # Helper: Fetch Redshift Snapshot
-# --------------------------------------------
+
 def fetch_redshift_snapshot():
     query = """
     SELECT *
@@ -94,18 +94,18 @@ def fetch_redshift_snapshot():
     """
     return pd.read_sql(query, engine)
 
-# --------------------------------------------
+
 # Helper: Save Run Snapshot
-# --------------------------------------------
+
 def save_run(df):
     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = os.path.join(RUN_FOLDER, f"run_{timestamp_str}.csv")
     df.to_csv(filename, index=False)
     return filename
 
-# --------------------------------------------
+
 # Fetch & Save Current Run
-# --------------------------------------------
+
 if fetch_data:
     df_current = fetch_redshift_snapshot()
     # Map Redshift columns
@@ -126,23 +126,33 @@ if not st.session_state.run_loaded:
     st.info("Click **Fetch Latest Redshift Data** to create a new run.")
     st.stop()
 
-# --------------------------------------------
+
 # Load Runs & Previous Run Logic
-# --------------------------------------------
+
 run_files = sorted(glob.glob(os.path.join(RUN_FOLDER, "run_*.csv")))
-current_run = st.session_state.df_current.drop_duplicates("vesselid")
+current_run = (
+    st.session_state.df_current
+    .sort_values("timestamp")
+    .groupby("vesselid", as_index=False)
+    .tail(1)
+)
 
 if len(run_files) > 1 and compare_prev:
     previous_df = pd.read_csv(run_files[-2])
-    previous_run = previous_df.drop_duplicates("vesselid")
+    previous_run = (
+        previous_df
+        .sort_values("timestamp")
+        .groupby("vesselid", as_index=False)
+        .tail(1)
+    )
     first_run = False
 else:
     previous_run = pd.DataFrame(columns=current_run.columns)
     first_run = True
 
-# --------------------------------------------
+
 # Core Logic – New / Resolved Events
-# --------------------------------------------
+
 current_vessels = set(current_run["vesselid"])
 previous_vessels = set(previous_run["vesselid"])
 new_vessels = current_vessels - previous_vessels
@@ -152,9 +162,9 @@ previous_regions = set(previous_run["eez_overall"])
 new_regions = current_regions - previous_regions
 resolved_regions = previous_regions - current_regions
 
-# --------------------------------------------
+
 # Sidebar: Smart Alerts
-# --------------------------------------------
+
 st.sidebar.subheader("Smart Alerts")
 if not first_run:
     if new_regions:
@@ -166,9 +176,9 @@ if not first_run:
         if increase_pct > 10:
             st.sidebar.error(f"> {int(increase_pct)}% increase in jammed vessels!")
 
-# --------------------------------------------
+
 # KPIs + Buttons
-# --------------------------------------------
+
 st.subheader("Key Metrics & New Events")
 c1, c2, c3 = st.columns(3)
 c1.metric("Total Jammed Vessels (Current Run)", len(current_vessels))
@@ -192,9 +202,9 @@ if st.button("Show Active Regions"):
     region_counts["status"] = region_counts["eez_overall"].apply(lambda x: "🆕 New" if x in new_regions else "Active")
     st.dataframe(region_counts, use_container_width=True)
 
-# --------------------------------------------
+
 # Interactive Vessel/Region Filter
-# --------------------------------------------
+
 st.subheader("Event Lookup")
 vessel_input = st.text_input("Vessel ID")
 region_input = st.text_input("EEZ / Region")
@@ -222,9 +232,9 @@ if date_range and len(date_range) == 2:
 st.write(f"Events Found: {len(filtered)}")
 st.dataframe(filtered[["vesselid", "eez_overall", "timestamp"]], use_container_width=True)
 
-# --------------------------------------------
+
 # Jammed Vessels per Region with Previous Run
-# --------------------------------------------
+
 st.subheader("Jammed Vessels per Region")
 current_counts = current_run.groupby("eez_overall")["vesselid"].nunique().reset_index(name="current_count")
 previous_counts = previous_run.groupby("eez_overall")["vesselid"].nunique().reset_index(name="prev_count")
@@ -242,9 +252,9 @@ bar_fig = px.bar(
 st.plotly_chart(bar_fig, use_container_width=True)
 
 
-# --------------------------------------------
+
 # Model Consistency Metrics
-# --------------------------------------------
+
 st.subheader("Model Consistency Metrics")
 c1, c2 = st.columns(2)
 
@@ -259,18 +269,26 @@ all_runs_df = pd.concat([pd.read_csv(f).drop_duplicates("vesselid") for f in run
 persistence = all_runs_df.groupby("vesselid").size().reset_index(name="appearances")
 c2.bar_chart(persistence.set_index("vesselid")["appearances"])
 
-# --------------------------------------------
+
 # Global Map
-# --------------------------------------------
+
 st.subheader("Global Jamming Overview")
-map_fig = px.scatter_mapbox(current_run, lat="latitude", lon="longitude", color="eez_overall",
-                            hover_name="vesselid", zoom=1, height=500)
+map_fig = px.scatter_mapbox(
+    current_run,
+    lat="latitude",
+    lon="longitude",
+    color="eez_overall",
+    hover_name="vesselid",
+    zoom=1,
+    height=500
+)
 map_fig.update_layout(mapbox_style="open-street-map")
 st.plotly_chart(map_fig, use_container_width=True)
 
-# --------------------------------------------
+
+
 # Multi-Run Trend
-# --------------------------------------------
+
 st.subheader(f"Trend – Last {last_n_runs} Runs")
 trend_runs = run_files[-min(last_n_runs, len(run_files)):]
 trend_data = []
@@ -292,7 +310,5 @@ trend_df = pd.DataFrame(trend_data).sort_values("run_time")
 trend_fig = px.line(trend_df, x="run_time", y="jammed_vessels", markers=True, title="Jammed Vessels Trend Across Runs")
 st.plotly_chart(trend_fig, use_container_width=True)
 
-# --------------------------------------------
-# Footer
-# --------------------------------------------
+
 st.info("Each fetch creates a new run.")
