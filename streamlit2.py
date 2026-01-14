@@ -11,9 +11,6 @@ from sqlalchemy import create_engine # 1.4.50
 import warnings
 
 warnings.filterwarnings("ignore")
-print(st.secrets["host_st"])
-print(st.secrets["db_st"])
-print(st.secrets["password_st"])
 
 # Page Config
 
