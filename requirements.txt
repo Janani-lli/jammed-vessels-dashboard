@@ -1,6 +1,5 @@
 streamlit
-pandas==2.1.4
+pandas>=2.1
+sqlalchemy>=2.0
+redshift-connector>=2.0.9
 plotly
-sqlalchemy==1.4.50
-redshift-connector
-sqlalchemy-redshift
