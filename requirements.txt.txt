@@ -1,5 +1,0 @@
-streamlit
-pandas
-plotly
-sqlalchemy==1.4.50
-psycopg2-binary
