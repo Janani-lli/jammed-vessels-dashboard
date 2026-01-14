@@ -4,4 +4,3 @@ plotly
 sqlalchemy
 redshift-connector
 psycopg2-binary
-sqlalchemy-create_engine
