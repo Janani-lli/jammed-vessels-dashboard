@@ -26,35 +26,22 @@ st.title(" GPS Jamming Monitoring Dashboard")
 
 # Redshift Connection Config
 
-def start_RS_engine_for_pd(
-    db_to_query="sas", 
-    host="lli-dev-rpc-redshift.cm1ma67sygrk.eu-west-1.redshift.amazonaws.com", 
-    username="jananinandagopal", 
-    password="JN89234gfA"
-):
-    
-    
+def start_RS_engine_for_pd():
     url = URL.create(
-        # indicate redshift_connector driver and dialect will be used
         drivername="redshift+redshift_connector",
-        # Amazon Redshift host
-        host=host,
-        port=5439,  # Amazon Redshift port
-        # database='sas',  # Amazon Redshift database
-        database=db_to_query,  # Amazon Redshift database
-        username=username,  # Amazon Redshift username
-        password=password  # Amazon Redshift password
+        host=st.secrets["redshift"]["host"],
+        port=st.secrets["redshift"]["port"],
+        database=st.secrets["redshift"]["database"],
+        username=st.secrets["redshift"]["username"],
+        password=st.secrets["redshift"]["password"],
     )
 
     engine = create_engine(url)
-
     return engine
-    
-engine = start_RS_engine_for_pd(
-    host=st.secrets["host_st"],
-    username=st.secrets["db_st"],
-    password=st.secrets["password_st"]
-)
+
+
+# Create engine
+engine = start_RS_engine_for_pd()
 
 
 # Persistent Run Storage
